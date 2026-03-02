@@ -1,0 +1,310 @@
+<!DOCTYPE html><html><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;"><meta http-equiv="x-dns-prefetch-control" content="off"><script src="https://puc.poecdn.net/authenticated_preview_page/standard.3ef2c256959faf5a756d.js"></script>
+    <meta charset="utf-8">
+    <title>Poe</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+  <script src="https://puc.poecdn.net/authenticated_preview_page/disableWebRTC.9710cebe07429a9e8e06.js"></script><meta name="x-poe-allow-downloads" content="true"><meta name="x-poe-datastore-behavior" content="disabled"><script src="https://puc.poecdn.net/authenticated_preview_page/tw.b9024aecac666455e183.js"></script><script src="https://puc.poecdn.net/authenticated_preview_page/deps.faccd16000d314dc16d5.js"></script><script src="https://puc.poecdn.net/authenticated_preview_page/exports.b0f0f482cdeb5302b0b9.js"></script><script src="https://puc.poecdn.net/authenticated_preview_page/renderer.75c73ae6b4235f62945a.js"></script><script>Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _react = require('react'); var _react2 = _interopRequireDefault(_react);
+var _lucidereact = require('lucide-react');
+
+const FengShuiUploader = () => {
+  // --- 狀態管理 ---
+  const [image, setImage] = _react.useState.call(void 0, null); // 儲存上傳圖片的 URL
+  const [scale, setScale] = _react.useState.call(void 0, 1);    // 圖片縮放比例
+  const [position, setPosition] = _react.useState.call(void 0, { x: 0, y: 0 }); // 圖片位置 (x, y)
+  const [rotation, setRotation] = _react.useState.call(void 0, 180); // 羅盤角度
+  const [mode, setMode] = _react.useState.call(void 0, 'pie');  // 'grid' (九宮) or 'pie' (放射)
+  const [isDragging, setIsDragging] = _react.useState.call(void 0, false);
+  const [dragStart, setDragStart] = _react.useState.call(void 0, { x: 0, y: 0 });
+
+  // 畫布中心點 (固定)
+  const canvasWidth = 800;
+  const canvasHeight = 600;
+  const centerX = canvasWidth / 2;
+  const centerY = canvasHeight / 2;
+
+  // --- 處理圖片上傳 ---
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setImage(event.target.result);
+        // 重置位置與縮放
+        setPosition({ x: 0, y: 0 });
+        setScale(1);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // --- 處理拖曳邏輯 (Pan) ---
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    });
+  };
+
+  const handleMouseMove = (e) => {
+    if (isDragging) {
+      setPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // --- 繪製風水圖層 ---
+
+  // 1. 放射法 (Pie Chart)
+  const renderPieLines = () => {
+    const lines = [];
+    const labels = ['N (坎)', 'NE (艮)', 'E (震)', 'SE (巽)', 'S (離)', 'SW (坤)', 'W (兌)', 'NW (乾)'];
+    const radius = 600; // 足夠長以覆蓋畫面
+    
+    for (let i = 0; i < 8; i++) {
+      // 角度計算：原始 0度 = 3點鐘方向。N通常在 -90度。
+      const angleDeg = (i * 45) - 90 + rotation; 
+      const angleRad = (angleDeg * Math.PI) / 180;
+      
+      // 文字位置 (稍微內縮)
+      const textRadius = 280;
+      const tx = centerX + textRadius * Math.cos(angleRad);
+      const ty = centerY + textRadius * Math.sin(angleRad);
+
+      // 分界線 (虛線)
+      const borderAngleDeg = angleDeg - 22.5;
+      const borderRad = (borderAngleDeg * Math.PI) / 180;
+      const bx = centerX + radius * Math.cos(borderRad);
+      const by = centerY + radius * Math.sin(borderRad);
+
+      lines.push(
+        _react2.default.createElement('g', { key: i, style: { pointerEvents: 'none' },}
+          /* 分界線 */
+          , _react2.default.createElement('line', { 
+            x1: centerX, y1: centerY, x2: bx, y2: by, 
+            stroke: "rgba(22, 163, 74, 0.8)"   , 
+            strokeWidth: "1.5", 
+            strokeDasharray: "5,5",} 
+          )
+          /* 方位文字 */
+          , _react2.default.createElement('text', { 
+            x: tx, y: ty, 
+            fill: "#15803d", 
+            fontSize: "16", 
+            fontWeight: "bold", 
+            textAnchor: "middle",
+            dominantBaseline: "middle",
+            style: { textShadow: '0px 0px 4px white, 0px 0px 4px white' },}
+
+            , labels[i]
+          )
+        )
+      );
+    }
+    return lines;
+  };
+
+  // 2. 九宮格 (Grid)
+  const renderGrid = () => {
+    const size = 600; // 九宮格總大小
+    const step = size / 3;
+    const half = size / 2;
+    
+    // 九宮格需要整體旋轉
+    return (
+      _react2.default.createElement('g', { transform: `translate(${centerX}, ${centerY}) rotate(${rotation})`, style: { pointerEvents: 'none' },}
+        /* 外框 */
+        , _react2.default.createElement('rect', { x: -half, y: -half, width: size, height: size, fill: "none", stroke: "rgba(37, 99, 235, 0.3)"   , strokeWidth: "1",} )
+
+        /* 垂直線 */
+        , _react2.default.createElement('line', { x1: -half + step, y1: -half, x2: -half + step, y2: half, stroke: "rgba(37, 99, 235, 0.8)"   , strokeWidth: "2",} )
+        , _react2.default.createElement('line', { x1: -half + step * 2, y1: -half, x2: -half + step * 2, y2: half, stroke: "rgba(37, 99, 235, 0.8)"   , strokeWidth: "2",} )
+
+        /* 水平線 */
+        , _react2.default.createElement('line', { x1: -half, y1: -half + step, x2: half, y2: -half + step, stroke: "rgba(37, 99, 235, 0.8)"   , strokeWidth: "2",} )
+        , _react2.default.createElement('line', { x1: -half, y1: -half + step * 2, x2: half, y2: -half + step * 2, stroke: "rgba(37, 99, 235, 0.8)"   , strokeWidth: "2",} )
+
+        /* 標記 (需要反向旋轉文字以保持直立，這裡簡化處理直接顯示) */
+        , _react2.default.createElement('text', { x: 0, y: -half + 40, transform: `rotate(${-rotation})`, textAnchor: "middle", fill: "#1d4ed8", fontSize: "20", fontWeight: "bold", style: {textShadow: '0 0 4px white'},}, "N")
+        , _react2.default.createElement('text', { x: 0, y: half - 40, transform: `rotate(${-rotation})`, textAnchor: "middle", fill: "#1d4ed8", fontSize: "20", fontWeight: "bold", style: {textShadow: '0 0 4px white'},}, "S")
+        , _react2.default.createElement('text', { x: half - 40, y: 0, transform: `rotate(${-rotation})`, textAnchor: "middle", fill: "#1d4ed8", fontSize: "20", fontWeight: "bold", style: {textShadow: '0 0 4px white'},}, "E")
+        , _react2.default.createElement('text', { x: -half + 40, y: 0, transform: `rotate(${-rotation})`, textAnchor: "middle", fill: "#1d4ed8", fontSize: "20", fontWeight: "bold", style: {textShadow: '0 0 4px white'},}, "W")
+      )
+    );
+  };
+
+  return (
+    _react2.default.createElement('div', { className: "w-full max-w-4xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden font-sans border border-gray-200 flex flex-col"           ,}
+
+      /* 頂部工具列 */
+      , _react2.default.createElement('div', { className: "bg-slate-50 p-4 border-b border-gray-200 flex flex-wrap justify-between items-center gap-4"        ,}
+        , _react2.default.createElement('div', null
+          , _react2.default.createElement('h2', { className: "text-lg font-bold text-gray-800 flex items-center gap-2"     ,}
+            , _react2.default.createElement(_lucidereact.RefreshCw, { className: "text-blue-600", size: 20,}), "風水立極尺 (圖片版)"
+
+          )
+        )
+
+        , _react2.default.createElement('div', { className: "flex gap-2" ,}
+          /* 上傳按鈕 */
+          , _react2.default.createElement('label', { className: "cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm"           ,}
+            , _react2.default.createElement(_lucidereact.Upload, { size: 18,} )
+            , _react2.default.createElement('span', { className: "text-sm font-bold" ,}, "上傳戶型圖")
+            , _react2.default.createElement('input', { type: "file", accept: "image/*", onChange: handleImageUpload, className: "hidden",} )
+          )
+        )
+      )
+
+      /* 說明區域 */
+      , !image && (
+        _react2.default.createElement('div', { className: "bg-blue-50 p-4 text-blue-800 text-sm flex gap-2 items-start"      ,}
+          , _react2.default.createElement(_lucidereact.Info, { size: 18, className: "mt-0.5 flex-shrink-0" ,} )
+          , _react2.default.createElement('p', null, "請點擊右上方「上傳戶型圖」按鈕。上傳後，您可以拖曳圖片將房子的中心點對準紅點，並旋轉羅盤進行分析。")
+        )
+      )
+
+      /* 主畫布區域 (Canvas) */
+      , _react2.default.createElement('div', { 
+        className: "relative w-full h-[500px] bg-gray-100 overflow-hidden cursor-move select-none group"       ,
+        onMouseDown: handleMouseDown,
+        onMouseMove: handleMouseMove,
+        onMouseUp: handleMouseUp,
+        onMouseLeave: handleMouseUp,}
+
+        /* 背景網格 (裝飾用) */
+        , _react2.default.createElement('div', { className: "absolute inset-0 opacity-10 pointer-events-none"   , 
+             style: { backgroundImage: 'radial-gradient(#444 1px, transparent 1px)', backgroundSize: '20px 20px' },}
+        )
+
+        /* 1. 用戶上傳的圖片層 */
+        , _react2.default.createElement('div', { 
+          className: "absolute origin-center transition-transform duration-0 ease-linear will-change-transform"     ,
+          style: {
+            left: '50%',
+            top: '50%',
+            transform: `translate(-50%, -50%) translate(${position.x}px, ${position.y}px) scale(${scale})`,
+          },}
+
+          , image ? (
+            _react2.default.createElement('img', { 
+              src: image, 
+              alt: "Floor Plan" , 
+              className: "max-w-none opacity-90 shadow-2xl"  ,
+              style: { pointerEvents: 'none' },} // 讓滑鼠事件穿透到父層 div
+            )
+          ) : (
+            // 預設佔位圖示
+            _react2.default.createElement('div', { className: "flex flex-col items-center justify-center w-64 h-64 border-4 border-dashed border-gray-300 rounded-xl text-gray-400"          ,}
+              , _react2.default.createElement(_lucidereact.Image, { size: 48, className: "mb-2",} )
+              , _react2.default.createElement('span', { className: "font-bold",}, "預覽區域")
+            )
+          )
+        )
+
+        /* 2. 風水分析覆蓋層 (SVG) - 永遠置中 */
+        , _react2.default.createElement('svg', { 
+          className: "absolute inset-0 w-full h-full pointer-events-none"    , 
+          viewBox: `0 0 ${canvasWidth} ${canvasHeight}`,
+          preserveAspectRatio: "xMidYMid meet" ,}
+
+          /* 十字準星 (輔助對齊) */
+          , _react2.default.createElement('line', { x1: centerX, y1: "0", x2: centerX, y2: canvasHeight, stroke: "rgba(0,0,0,0.1)", strokeWidth: "1",} )
+          , _react2.default.createElement('line', { x1: "0", y1: centerY, x2: canvasWidth, y2: centerY, stroke: "rgba(0,0,0,0.1)", strokeWidth: "1",} )
+
+          /* 風水線條 */
+          , mode === 'pie' ? renderPieLines() : renderGrid()
+
+          /* 太極點 (中心紅點) */
+          , _react2.default.createElement('circle', { cx: centerX, cy: centerY, r: "6", fill: "#dc2626", stroke: "white", strokeWidth: "2",} )
+          , _react2.default.createElement('circle', { cx: centerX, cy: centerY, r: "30", fill: "none", stroke: "#dc2626", strokeWidth: "1", strokeDasharray: "2,2", opacity: "0.5",} )
+        )
+
+        /* 提示文字 */
+        , image && (
+          _react2.default.createElement('div', { className: "absolute bottom-4 right-4 bg-black/60 text-white text-xs px-2 py-1 rounded pointer-events-none"         ,}, "拖曳圖片以對齊中心點"
+
+          )
+        )
+      )
+
+      /* 底部控制面板 */
+      , _react2.default.createElement('div', { className: "bg-white p-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"        ,}
+
+        /* 1. 旋轉控制 */
+        , _react2.default.createElement('div', { className: "bg-gray-50 p-3 rounded-lg border border-gray-200"    ,}
+          , _react2.default.createElement('div', { className: "flex justify-between mb-2"  ,}
+            , _react2.default.createElement('label', { className: "text-sm font-bold text-gray-700 flex items-center gap-2"     ,}
+              , _react2.default.createElement(_lucidereact.RotateCw, { size: 16,} ), " 羅盤方位 (N)"
+            )
+            , _react2.default.createElement('span', { className: "text-xs font-mono bg-white px-2 py-0.5 rounded border"      ,}, rotation, "°")
+          )
+          , _react2.default.createElement('input', {
+            type: "range",
+            min: "0",
+            max: "360",
+            value: rotation,
+            onChange: (e) => setRotation(Number(e.target.value)),
+            className: "w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-green-600"      ,}
+          )
+          , _react2.default.createElement('p', { className: "text-xs text-gray-500 mt-1"  ,}, "滑動以校正北方位置")
+        )
+
+        /* 2. 縮放控制 */
+        , _react2.default.createElement('div', { className: "bg-gray-50 p-3 rounded-lg border border-gray-200"    ,}
+          , _react2.default.createElement('div', { className: "flex justify-between mb-2"  ,}
+            , _react2.default.createElement('label', { className: "text-sm font-bold text-gray-700 flex items-center gap-2"     ,}
+              , _react2.default.createElement(_lucidereact.ZoomIn, { size: 16,} ), " 圖片縮放"
+            )
+            , _react2.default.createElement('span', { className: "text-xs font-mono bg-white px-2 py-0.5 rounded border"      ,}, (scale * 100).toFixed(0), "%")
+          )
+          , _react2.default.createElement('input', {
+            type: "range",
+            min: "0.2",
+            max: "3",
+            step: "0.1",
+            value: scale,
+            onChange: (e) => setScale(Number(e.target.value)),
+            className: "w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-blue-600"      ,}
+          )
+          , _react2.default.createElement('p', { className: "text-xs text-gray-500 mt-1"  ,}, "調整圖片大小以符合比例")
+        )
+
+        /* 3. 模式切換 */
+        , _react2.default.createElement('div', { className: "flex items-center justify-center gap-2"   ,}
+          , _react2.default.createElement('button', {
+            onClick: () => setMode('grid'),
+            className: `flex-1 py-3 px-4 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${
+              mode === 'grid' 
+                ? 'bg-blue-600 text-white shadow-md' 
+                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`,}
+
+            , _react2.default.createElement(_lucidereact.Grid, { size: 18,} ), " 九宮格"
+          )
+          , _react2.default.createElement('button', {
+            onClick: () => setMode('pie'),
+            className: `flex-1 py-3 px-4 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${
+              mode === 'pie' 
+                ? 'bg-green-600 text-white shadow-md' 
+                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`,}
+
+            , _react2.default.createElement(_lucidereact.PieChart, { size: 18,} ), " 放射法"
+          )
+        )
+      )
+    )
+  );
+};
+
+exports. default = FengShuiUploader;
+</script></head>
+  <body>
+  
+
+<div id="preview-app"></div></body></html>
