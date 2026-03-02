@@ -159,14 +159,13 @@
         const renderPieLines = () => {
             const lines = [];
             const labels = ['N (坎)', 'NE (艮)', 'E (震)', 'SE (巽)', 'S (離)', 'SW (坤)', 'W (兌)', 'NW (乾)'];
-            // Radius extends to edge of 800x800 square
             const radius = 560; 
             
             for (let i = 0; i < 8; i++) {
                 const angleDeg = (i * 45) - 90 + rotation; 
                 const angleRad = (angleDeg * Math.PI) / 180;
                 
-                const textRadius = 320; // Adjusted for larger square
+                const textRadius = 320; 
                 const tx = centerX + textRadius * Math.cos(angleRad);
                 const ty = centerY + textRadius * Math.sin(angleRad);
 
@@ -188,7 +187,7 @@
         };
 
         const renderGrid = () => {
-            const size = 600; // Keep grid size same, it fits well in 800x800
+            const size = 600; 
             const step = size / 3;
             const half = size / 2;
             
@@ -223,16 +222,18 @@
                     </label>
                 </div>
 
-                {/* Info Bar */}
+                {/* Info Bar - Updated to show hints here instead of overlay */}
                 <div className="bg-blue-50 px-4 py-2 text-blue-800 text-xs flex justify-between items-center border-b border-blue-100">
-                    <div className="flex items-center gap-2">
-                        <IconInfo />
-                        <span>{fileName ? `已選擇文件: ${fileName}` : "請上傳圖片以開始分析"}</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                        <IconInfo className="flex-shrink-0" />
+                        <span className="truncate">{fileName ? `已選擇文件: ${fileName}` : "請上傳圖片以開始分析"}</span>
                     </div>
-                    {!image && <span className="text-blue-600/70">支援 JPG, PNG</span>}
+                    <span className="text-blue-600/70 ml-2 flex-shrink-0 whitespace-nowrap">
+                        {image ? "單指移動 / 雙指縮放" : "支援 JPG, PNG"}
+                    </span>
                 </div>
 
-                {/* Canvas Area - Now Aspect Square */}
+                {/* Canvas Area */}
                 <div 
                     className="relative w-full aspect-square bg-gray-100 overflow-hidden cursor-move select-none group border-b border-gray-200 canvas-container"
                     onMouseDown={handleMouseDown}
@@ -270,12 +271,8 @@
                         <circle cx={centerX} cy={centerY} r="6" fill="#dc2626" stroke="white" strokeWidth="2" />
                         <circle cx={centerX} cy={centerY} r="30" fill="none" stroke="#dc2626" strokeWidth="1" strokeDasharray="2,2" opacity="0.5" />
                     </svg>
-
-                    {image && (
-                        <div className="absolute bottom-4 right-4 bg-black/60 text-white text-xs px-2 py-1 rounded pointer-events-none z-20">
-                            單指移動 / 雙指縮放
-                        </div>
-                    )}
+                    
+                    {/* Floating instruction box removed as requested */}
                 </div>
 
                 {/* Controls */}
