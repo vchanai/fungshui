@@ -1,62 +1,51 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Upload, Move, ZoomIn, RotateCw, Grid, PieChart, RefreshCw, Info, Image as ImageIcon, Loader2 } from 'lucide-react';
 
 const FengShuiUploader = () => {
-  // --- 狀態管理 ---
-  const [image, setImage] = useState(null); // 儲存上傳圖片的 URL
-  const [scale, setScale] = useState(1);    // 圖片縮放比例
-  const [position, setPosition] = useState({ x: 0, y: 0 }); // 圖片位置 (x, y)
-  const [rotation, setRotation] = useState(180); // 羅盤角度
-  const [mode, setMode] = useState('pie');  // 'grid' (九宮) or 'pie' (放射)
+  // --- State Management ---
+  const [image, setImage] = useState(null);
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [rotation, setRotation] = useState(180);
+  const [mode, setMode] = useState('pie'); // 'grid' or 'pie'
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [isLoading, setIsLoading] = useState(false); // 載入狀態
+  const [isLoading, setIsLoading] = useState(false);
+  const [fileName, setFileName] = useState('');
 
-  const fileInputRef = useRef(null); // 引用隱藏的 input
-
-  // 畫布中心點 (固定)
+  // Canvas constants
   const canvasWidth = 800;
   const canvasHeight = 600;
   const centerX = canvasWidth / 2;
   const centerY = canvasHeight / 2;
 
-  // --- 觸發文件選擇 ---
-  const handleUploadClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  // --- 處理圖片上傳 ---
+  // --- File Handling ---
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
       setIsLoading(true);
-      const reader = new FileReader();
+      setFileName(file.name);
       
+      const reader = new FileReader();
       reader.onload = (event) => {
         setImage(event.target.result);
-        // 重置位置與縮放
         setPosition({ x: 0, y: 0 });
         setScale(1);
         setIsLoading(false);
       };
-      
       reader.onerror = () => {
-        console.error("File reading failed");
+        alert("讀取圖片失敗，請重試");
         setIsLoading(false);
       };
-
       reader.readAsDataURL(file);
     }
-    
-    // 重要：清空 input 值，確保如果用戶再次選擇同一張圖片也能觸發 onChange
+    // Reset input so same file can be selected again
     e.target.value = '';
   };
 
-  // --- 處理拖曳邏輯 (Pan) ---
+  // --- Drag Logic ---
   const handleMouseDown = (e) => {
-    if (!image) return; // 沒有圖片時不允許拖曳
+    if (!image) return;
     setIsDragging(true);
     setDragStart({
       x: e.clientX - position.x,
@@ -77,25 +66,20 @@ const FengShuiUploader = () => {
     setIsDragging(false);
   };
 
-  // --- 繪製風水圖層 ---
-
-  // 1. 放射法 (Pie Chart)
+  // --- Rendering Helpers ---
   const renderPieLines = () => {
     const lines = [];
     const labels = ['N (坎)', 'NE (艮)', 'E (震)', 'SE (巽)', 'S (離)', 'SW (坤)', 'W (兌)', 'NW (乾)'];
-    const radius = 600; // 足夠長以覆蓋畫面
+    const radius = 600;
     
     for (let i = 0; i < 8; i++) {
-      // 角度計算：原始 0度 = 3點鐘方向。N通常在 -90度。
       const angleDeg = (i * 45) - 90 + rotation; 
       const angleRad = (angleDeg * Math.PI) / 180;
       
-      // 文字位置 (稍微內縮)
       const textRadius = 280;
       const tx = centerX + textRadius * Math.cos(angleRad);
       const ty = centerY + textRadius * Math.sin(angleRad);
 
-      // 分界線 (虛線)
       const borderAngleDeg = angleDeg - 22.5;
       const borderRad = (borderAngleDeg * Math.PI) / 180;
       const bx = centerX + radius * Math.cos(borderRad);
@@ -103,14 +87,12 @@ const FengShuiUploader = () => {
 
       lines.push(
         <g key={i} style={{ pointerEvents: 'none' }}>
-          {/* 分界線 */}
           <line 
             x1={centerX} y1={centerY} x2={bx} y2={by} 
             stroke="rgba(22, 163, 74, 0.8)" 
             strokeWidth="1.5" 
             strokeDasharray="5,5" 
           />
-          {/* 方位文字 */}
           <text 
             x={tx} y={ty} 
             fill="#15803d" 
@@ -128,27 +110,19 @@ const FengShuiUploader = () => {
     return lines;
   };
 
-  // 2. 九宮格 (Grid)
   const renderGrid = () => {
-    const size = 600; // 九宮格總大小
+    const size = 600;
     const step = size / 3;
     const half = size / 2;
     
-    // 九宮格需要整體旋轉
     return (
       <g transform={`translate(${centerX}, ${centerY}) rotate(${rotation})`} style={{ pointerEvents: 'none' }}>
-        {/* 外框 */}
         <rect x={-half} y={-half} width={size} height={size} fill="none" stroke="rgba(37, 99, 235, 0.3)" strokeWidth="1" />
-        
-        {/* 垂直線 */}
         <line x1={-half + step} y1={-half} x2={-half + step} y2={half} stroke="rgba(37, 99, 235, 0.8)" strokeWidth="2" />
         <line x1={-half + step * 2} y1={-half} x2={-half + step * 2} y2={half} stroke="rgba(37, 99, 235, 0.8)" strokeWidth="2" />
-        
-        {/* 水平線 */}
         <line x1={-half} y1={-half + step} x2={half} y2={-half + step} stroke="rgba(37, 99, 235, 0.8)" strokeWidth="2" />
         <line x1={-half} y1={-half + step * 2} x2={half} y2={-half + step * 2} stroke="rgba(37, 99, 235, 0.8)" strokeWidth="2" />
         
-        {/* 標記 (需要反向旋轉文字以保持直立，這裡簡化處理直接顯示) */}
         <text x={0} y={-half + 40} transform={`rotate(${-rotation})`} textAnchor="middle" fill="#1d4ed8" fontSize="20" fontWeight="bold" style={{textShadow: '0 0 4px white'}}>N</text>
         <text x={0} y={half - 40} transform={`rotate(${-rotation})`} textAnchor="middle" fill="#1d4ed8" fontSize="20" fontWeight="bold" style={{textShadow: '0 0 4px white'}}>S</text>
         <text x={half - 40} y={0} transform={`rotate(${-rotation})`} textAnchor="middle" fill="#1d4ed8" fontSize="20" fontWeight="bold" style={{textShadow: '0 0 4px white'}}>E</text>
@@ -160,61 +134,65 @@ const FengShuiUploader = () => {
   return (
     <div className="w-full max-w-4xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden font-sans border border-gray-200 flex flex-col">
       
-      {/* 隱藏的文件輸入框 */}
-      <input 
-        type="file" 
-        ref={fileInputRef}
-        accept="image/*" 
-        onChange={handleFileChange} 
-        className="hidden" 
-        style={{ display: 'none' }}
-      />
-
-      {/* 頂部工具列 */}
-      <div className="bg-slate-50 p-4 border-b border-gray-200 flex flex-wrap justify-between items-center gap-4">
-        <div>
-          <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            <RefreshCw className="text-blue-600" size={20}/> 
-            風水立極尺 (圖片版)
-          </h2>
-        </div>
+      {/* Header */}
+      <div className="bg-slate-50 p-4 border-b border-gray-200 flex flex-wrap justify-between items-center gap-4 z-20 relative">
+        <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <RefreshCw className="text-blue-600" size={20}/> 
+          風水立極尺 (圖片版)
+        </h2>
         
-        <div className="flex gap-2">
-          {/* 上傳按鈕 - 改為 Button 觸發 Ref */}
-          <button 
-            onClick={handleUploadClick}
+        {/* 
+            Native HTML Label for File Upload 
+            This is the most robust way to trigger uploads without JS events being blocked.
+        */}
+        <label 
+          htmlFor="fengshui-upload"
+          className={`
+            cursor-pointer bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2 rounded-lg 
+            flex items-center gap-2 transition-colors shadow-sm select-none
+            ${isLoading ? 'opacity-50 cursor-wait' : ''}
+          `}
+        >
+          {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
+          <span className="text-sm font-bold">{isLoading ? '處理中...' : '上傳戶型圖'}</span>
+          
+          {/* Input is visually hidden but technically present in layout to ensure events fire */}
+          <input 
+            id="fengshui-upload"
+            type="file" 
+            accept="image/*" 
+            onChange={handleFileChange} 
             disabled={isLoading}
-            className="cursor-pointer bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
-            <span className="text-sm font-bold">{isLoading ? '處理中...' : '上傳戶型圖'}</span>
-          </button>
-        </div>
+            className="sr-only" // Tailwind utility for screen-reader only (visually hidden)
+            style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', border: 0 }}
+          />
+        </label>
       </div>
 
-      {/* 說明區域 */}
-      {!image && !isLoading && (
-        <div className="bg-blue-50 p-4 text-blue-800 text-sm flex gap-2 items-start">
-          <Info size={18} className="mt-0.5 flex-shrink-0" />
-          <p>請點擊右上方「上傳戶型圖」按鈕。上傳後，您可以拖曳圖片將房子的中心點對準紅點，並旋轉羅盤進行分析。</p>
+      {/* Info / Status Bar */}
+      <div className="bg-blue-50 px-4 py-2 text-blue-800 text-xs flex justify-between items-center border-b border-blue-100">
+        <div className="flex items-center gap-2">
+          <Info size={14} />
+          <span>{fileName ? `已選擇文件: ${fileName}` : "請上傳圖片以開始分析"}</span>
         </div>
-      )}
+        {!image && <span className="text-blue-600/70">支援 JPG, PNG</span>}
+      </div>
 
-      {/* 主畫布區域 (Canvas) */}
+      {/* Canvas Area - Hardcoded height to prevent collapse */}
       <div 
-        className="relative w-full min-h-[500px] h-[500px] bg-gray-100 overflow-hidden cursor-move select-none group border-b border-gray-200"
+        className="relative w-full bg-gray-100 overflow-hidden cursor-move select-none group border-b border-gray-200"
+        style={{ height: '500px', minHeight: '500px', touchAction: 'none' }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        style={{ touchAction: 'none' }} // 防止觸控設備滾動
       >
-        {/* 背景網格 (裝飾用) */}
+        {/* Grid Background */}
         <div className="absolute inset-0 opacity-10 pointer-events-none" 
              style={{ backgroundImage: 'radial-gradient(#444 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
         </div>
 
-        {/* 1. 用戶上傳的圖片層 */}
+        {/* User Image Layer */}
         <div 
           className="absolute origin-center transition-transform duration-0 ease-linear will-change-transform"
           style={{
@@ -232,38 +210,33 @@ const FengShuiUploader = () => {
               draggable="false"
             />
           ) : (
-            // 預設佔位圖示
             <div className="flex flex-col items-center justify-center w-64 h-64 border-4 border-dashed border-gray-300 rounded-xl text-gray-400">
               {isLoading ? (
                 <Loader2 size={48} className="mb-2 animate-spin text-blue-500" />
               ) : (
                 <ImageIcon size={48} className="mb-2" />
               )}
-              <span className="font-bold">{isLoading ? '圖片讀取中...' : '預覽區域'}</span>
+              <span className="font-bold">{isLoading ? '讀取中...' : '預覽區域'}</span>
             </div>
           )}
         </div>
 
-        {/* 2. 風水分析覆蓋層 (SVG) - 永遠置中 */}
+        {/* Overlay Layer (SVG) */}
         <svg 
           className="absolute inset-0 w-full h-full pointer-events-none" 
           viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
           preserveAspectRatio="xMidYMid meet"
-          style={{ zIndex: 10 }} // 確保 SVG 在圖片上方
+          style={{ zIndex: 10 }}
         >
-          {/* 十字準星 (輔助對齊) */}
           <line x1={centerX} y1="0" x2={centerX} y2={canvasHeight} stroke="rgba(0,0,0,0.1)" strokeWidth="1" />
           <line x1="0" y1={centerY} x2={canvasWidth} y2={centerY} stroke="rgba(0,0,0,0.1)" strokeWidth="1" />
 
-          {/* 風水線條 */}
           {mode === 'pie' ? renderPieLines() : renderGrid()}
 
-          {/* 太極點 (中心紅點) */}
           <circle cx={centerX} cy={centerY} r="6" fill="#dc2626" stroke="white" strokeWidth="2" />
           <circle cx={centerX} cy={centerY} r="30" fill="none" stroke="#dc2626" strokeWidth="1" strokeDasharray="2,2" opacity="0.5" />
         </svg>
 
-        {/* 提示文字 */}
         {image && (
           <div className="absolute bottom-4 right-4 bg-black/60 text-white text-xs px-2 py-1 rounded pointer-events-none z-20">
             拖曳圖片以對齊中心點
@@ -271,10 +244,10 @@ const FengShuiUploader = () => {
         )}
       </div>
 
-      {/* 底部控制面板 */}
-      <div className="bg-white p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Controls */}
+      <div className="bg-white p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 z-20 relative">
         
-        {/* 1. 旋轉控制 */}
+        {/* Rotation */}
         <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
           <div className="flex justify-between mb-2">
             <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
@@ -290,10 +263,9 @@ const FengShuiUploader = () => {
             onChange={(e) => setRotation(Number(e.target.value))}
             className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-green-600"
           />
-          <p className="text-xs text-gray-500 mt-1">滑動以校正北方位置</p>
         </div>
 
-        {/* 2. 縮放控制 */}
+        {/* Scale */}
         <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
           <div className="flex justify-between mb-2">
             <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
@@ -310,10 +282,9 @@ const FengShuiUploader = () => {
             onChange={(e) => setScale(Number(e.target.value))}
             className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-blue-600"
           />
-          <p className="text-xs text-gray-500 mt-1">調整圖片大小以符合比例</p>
         </div>
 
-        {/* 3. 模式切換 */}
+        {/* Mode Toggle */}
         <div className="flex items-center justify-center gap-2">
           <button
             onClick={() => setMode('grid')}
