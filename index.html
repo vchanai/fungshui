@@ -2,7 +2,7 @@
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>風水立極尺 (圖片版)</title>
     
     <!-- Tailwind CSS -->
@@ -16,11 +16,16 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <style>
-        body { background-color: #f3f4f6; padding: 20px; font-family: sans-serif; }
+        body { 
+            background-color: #f3f4f6; 
+            padding: 20px; 
+            font-family: sans-serif; 
+            overscroll-behavior: none; /* Prevents bounce effect on mobile */
+        }
         .canvas-container {
             background-image: radial-gradient(#ccc 1px, transparent 1px);
             background-size: 20px 20px;
-            /* CRITICAL: Prevents the whole page from scrolling when dragging on mobile */
+            /* CRITICAL: Prevents browser zooming/scrolling so our JS can handle it */
             touch-action: none; 
         }
     </style>
@@ -48,9 +53,15 @@
         const [position, setPosition] = useState({ x: 0, y: 0 });
         const [rotation, setRotation] = useState(180);
         const [mode, setMode] = useState('pie'); 
+        const [fileName, setFileName] = useState('');
+
+        // Dragging State
         const [isDragging, setIsDragging] = useState(false);
         const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-        const [fileName, setFileName] = useState('');
+
+        // Pinch Zoom State
+        const [initialPinchDist, setInitialPinchDist] = useState(null);
+        const [initialScale, setInitialScale] = useState(1);
 
         const canvasWidth = 800;
         const canvasHeight = 600;
@@ -69,6 +80,14 @@
                 };
                 reader.readAsDataURL(file);
             }
+        };
+
+        // --- Helper: Calculate distance between two fingers ---
+        const getDistance = (touches) => {
+            return Math.hypot(
+                touches[0].clientX - touches[1].clientX,
+                touches[0].clientY - touches[1].clientY
+            );
         };
 
         // --- Mouse Events (Laptop/Desktop) ---
@@ -97,21 +116,56 @@
         // --- Touch Events (Mobile/Tablet) ---
         const handleTouchStart = (e) => {
             if (!image) return;
-            const touch = e.touches[0];
-            setIsDragging(true);
-            setDragStart({
-                x: touch.clientX - position.x,
-                y: touch.clientY - position.y
-            });
+
+            if (e.touches.length === 1) {
+                // Single touch: Dragging
+                setIsDragging(true);
+                const touch = e.touches[0];
+                setDragStart({
+                    x: touch.clientX - position.x,
+                    y: touch.clientY - position.y
+                });
+            } else if (e.touches.length === 2) {
+                // Two touches: Pinch Zooming
+                setIsDragging(false); // Stop dragging
+                const dist = getDistance(e.touches);
+                setInitialPinchDist(dist);
+                setInitialScale(scale);
+            }
         };
 
         const handleTouchMove = (e) => {
-            if (isDragging && image) {
+            if (!image) return;
+
+            if (e.touches.length === 1 && isDragging) {
+                // Single touch: Move image
                 const touch = e.touches[0];
                 setPosition({
                     x: touch.clientX - dragStart.x,
                     y: touch.clientY - dragStart.y
                 });
+            } else if (e.touches.length === 2 && initialPinchDist) {
+                // Two touches: Zoom image
+                const currentDist = getDistance(e.touches);
+                const scaleFactor = currentDist / initialPinchDist;
+                
+                // Calculate new scale based on initial scale when pinch started
+                let newScale = initialScale * scaleFactor;
+                
+                // Limit scale boundaries (0.2x to 5x)
+                newScale = Math.min(Math.max(newScale, 0.2), 5);
+                
+                setScale(newScale);
+            }
+        };
+
+        const handleTouchEnd = (e) => {
+            // If fingers are lifted, reset states
+            if (e.touches.length < 2) {
+                setInitialPinchDist(null);
+            }
+            if (e.touches.length === 0) {
+                setIsDragging(false);
             }
         };
 
@@ -200,7 +254,7 @@
                     onMouseLeave={handleMouseUp}
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
-                    onTouchEnd={handleMouseUp}
+                    onTouchEnd={handleTouchEnd}
                 >
                     {/* User Image Layer */}
                     <div 
@@ -232,7 +286,7 @@
 
                     {image && (
                         <div className="absolute bottom-4 right-4 bg-black/60 text-white text-xs px-2 py-1 rounded pointer-events-none z-20">
-                            拖曳圖片以對齊中心點
+                            單指移動 / 雙指縮放
                         </div>
                     )}
                 </div>
