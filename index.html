@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>專業風水立極尺 (加粗線條版)</title>
+    <title>專業風水立極尺</title>
     
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -123,9 +123,8 @@
         const [image, setImage] = useState(null);
         const [scale, setScale] = useState(0.5); 
         const [position, setPosition] = useState({ x: 0, y: 0 });
-        const [rotation, setRotation] = useState(180);
+        const [rotation, setRotation] = useState(0);
         const [opacity, setOpacity] = useState(0.5); 
-        // 修改：默認模式改為 grid (九宮格)
         const [mode, setMode] = useState('grid'); 
         
         // 九宮格的寬高
@@ -258,16 +257,14 @@
                     {/* 水平線 - 加粗到 3 */}
                     <line x1={-halfW} y1={-halfH + stepY} x2={halfW} y2={-halfH + stepY} stroke="rgba(37, 99, 235, 0.6)" strokeWidth="3" />
                     <line x1={-halfW} y1={-halfH + stepY * 2} x2={halfW} y2={-halfH + stepY * 2} stroke="rgba(37, 99, 235, 0.6)" strokeWidth="3" />
-                    
-                    {/* 北向標記 */}
-                    <text x={0} y={-halfH - 15} transform={`rotate(${-rotation} 0 ${-halfH - 15})`} textAnchor="middle" fill="#1d4ed8" fontSize="18" fontWeight="bold" style={{textShadow: '0 0 4px white'}}>N</text>
                 </g>
             );
         };
 
         const renderPie = () => {
             const lines = [];
-            const labels = ['N (坎)', 'NE (艮)', 'E (震)', 'SE (巽)', 'S (離)', 'SW (坤)', 'W (兌)', 'NW (乾)'];
+            // 修改：加入中文方位與英文結合
+            const labels = ['北 N', '東北 NE', '東 E', '東南 SE', '南 S', '西南 SW', '西 W', '西北 NW'];
             const radius = 560; 
             for (let i = 0; i < 8; i++) {
                 const angleDeg = (i * 45) - 90 + rotation; 
@@ -283,7 +280,7 @@
                     <g key={i} style={{ pointerEvents: 'none' }}>
                         {/* 放射線 - 加粗到 3 */}
                         <line x1={centerX} y1={centerY} x2={bx} y2={by} stroke="rgba(22, 163, 74, 0.8)" strokeWidth="3" strokeDasharray="5,5" />
-                        <text x={tx} y={ty} fill="#15803d" fontSize="16" fontWeight="bold" textAnchor="middle" dominantBaseline="middle" style={{ textShadow: '0px 0px 4px white' }}>{labels[i]}</text>
+                        <text x={tx} y={ty} fill="#15803d" fontSize="22" fontWeight="bold" textAnchor="middle" dominantBaseline="middle" style={{ textShadow: '0px 0px 4px white' }}>{labels[i]}</text>
                     </g>
                 );
             }
@@ -631,7 +628,6 @@
                         </button>
                     </div>
 
-                    {/* 九宮格專屬調整區 - 只有在九宮格模式下顯示 */}
                     {mode === 'grid' && (
                         <div className="grid grid-cols-2 gap-4 bg-blue-50 p-3 rounded-lg border border-blue-100">
                             <div>
