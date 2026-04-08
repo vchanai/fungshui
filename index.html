@@ -8,7 +8,7 @@
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 引入 React 和 ReactDOM (移除 crossorigin 避免本地檔案讀取錯誤) -->
+    <!-- 引入 React 和 ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
@@ -25,7 +25,6 @@
 </head>
 <body>
 
-<!-- 如果 JavaScript 被阻擋或載入較慢，會顯示這段文字 -->
 <div id="root">
     <div style="text-align: center; padding: 50px 20px; color: #4b5563; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: 40px auto;">
         <h2 style="font-size: 20px; margin-bottom: 15px; color: #1d4ed8;">載入中...</h2>
@@ -241,6 +240,7 @@
             };
         };
 
+        // --- 更新後的九宮格渲染邏輯 ---
         const renderGrid = () => {
             const w = gridWidth;
             const h = gridHeight;
@@ -249,13 +249,48 @@
             const halfW = w / 2;
             const halfH = h / 2;
             
+            // 方位圓圈的標籤與半徑
+            const labels = ['北 N', '東北 NE', '東 E', '東南 SE', '南 S', '西南 SW', '西 W', '西北 NW'];
+            const ringRadius = 340; // 圓圈大小
+            const textRadius = 370; // 文字距離
+            
+            const compassElements = [];
+            for (let i = 0; i < 8; i++) {
+                const angleDeg = (i * 45) - 90; 
+                const angleRad = (angleDeg * Math.PI) / 180;
+                const tx = textRadius * Math.cos(angleRad);
+                const ty = textRadius * Math.sin(angleRad);
+                const lineX = ringRadius * Math.cos(angleRad);
+                const lineY = ringRadius * Math.sin(angleRad);
+                const innerLineX = (ringRadius - 10) * Math.cos(angleRad);
+                const innerLineY = (ringRadius - 10) * Math.sin(angleRad);
+                
+                compassElements.push(
+                    <g key={`grid_dir_${i}`}>
+                        <line x1={innerLineX} y1={innerLineY} x2={lineX} y2={lineY} stroke="#dc2626" strokeWidth="3" />
+                        <text x={tx} y={ty} fill="#dc2626" fontSize="22" fontWeight="bold" textAnchor="middle" dominantBaseline="middle" style={{ textShadow: '0px 0px 4px white' }}>
+                            {labels[i]}
+                        </text>
+                    </g>
+                );
+            }
+
             return (
-                <g transform={`translate(${centerX}, ${centerY}) rotate(${-rotation})`} style={{ pointerEvents: 'none' }}>
-                    <rect x={-halfW} y={-halfH} width={w} height={h} fill="none" stroke="rgba(37, 99, 235, 0.8)" strokeWidth="5" />
-                    <line x1={-halfW + stepX} y1={-halfH} x2={-halfW + stepX} y2={halfH} stroke="rgba(37, 99, 235, 0.6)" strokeWidth="3" />
-                    <line x1={-halfW + stepX * 2} y1={-halfH} x2={-halfW + stepX * 2} y2={halfH} stroke="rgba(37, 99, 235, 0.6)" strokeWidth="3" />
-                    <line x1={-halfW} y1={-halfH + stepY} x2={halfW} y2={-halfH + stepY} stroke="rgba(37, 99, 235, 0.6)" strokeWidth="3" />
-                    <line x1={-halfW} y1={-halfH + stepY * 2} x2={halfW} y2={-halfH + stepY * 2} stroke="rgba(37, 99, 235, 0.6)" strokeWidth="3" />
+                <g style={{ pointerEvents: 'none' }}>
+                    {/* 1. 固定的九宮格 (不旋轉) */}
+                    <g transform={`translate(${centerX}, ${centerY})`}>
+                        <rect x={-halfW} y={-halfH} width={w} height={h} fill="none" stroke="rgba(37, 99, 235, 0.8)" strokeWidth="5" />
+                        <line x1={-halfW + stepX} y1={-halfH} x2={-halfW + stepX} y2={halfH} stroke="rgba(37, 99, 235, 0.6)" strokeWidth="3" />
+                        <line x1={-halfW + stepX * 2} y1={-halfH} x2={-halfW + stepX * 2} y2={halfH} stroke="rgba(37, 99, 235, 0.6)" strokeWidth="3" />
+                        <line x1={-halfW} y1={-halfH + stepY} x2={halfW} y2={-halfH + stepY} stroke="rgba(37, 99, 235, 0.6)" strokeWidth="3" />
+                        <line x1={-halfW} y1={-halfH + stepY * 2} x2={halfW} y2={-halfH + stepY * 2} stroke="rgba(37, 99, 235, 0.6)" strokeWidth="3" />
+                    </g>
+
+                    {/* 2. 可旋轉的方位圓圈 */}
+                    <g transform={`translate(${centerX}, ${centerY}) rotate(${-rotation})`}>
+                        <circle cx="0" cy="0" r={ringRadius} fill="none" stroke="rgba(220, 38, 38, 0.6)" strokeWidth="2" strokeDasharray="8,8" />
+                        {compassElements}
+                    </g>
                 </g>
             );
         };
