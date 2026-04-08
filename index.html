@@ -8,15 +8,15 @@
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 引入 React 和 ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- 引入 React 和 ReactDOM (移除 crossorigin 避免本地檔案讀取錯誤) -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
     <!-- 引入 Babel 用於解析 JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
-        body { background-color: #f3f4f6; padding: 20px; }
+        body { background-color: #f3f4f6; padding: 20px; font-family: sans-serif; }
         /* 防止手機上下拉動刷新 */
         body { overscroll-behavior: none; }
         /* 讓文字在複雜背景上更清晰 */
@@ -25,7 +25,16 @@
 </head>
 <body>
 
-<div id="root"></div>
+<!-- 如果 JavaScript 被阻擋或載入較慢，會顯示這段文字 -->
+<div id="root">
+    <div style="text-align: center; padding: 50px 20px; color: #4b5563; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: 40px auto;">
+        <h2 style="font-size: 20px; margin-bottom: 15px; color: #1d4ed8;">載入中...</h2>
+        <p style="line-height: 1.6;">如果您一直看到這個畫面，表示您的 App 阻擋了程式執行。</p>
+        <p style="line-height: 1.6; margin-top: 15px; font-weight: bold; color: #dc2626;">
+            👉 請點擊右上角的「分享」按鈕，<br>選擇「在 Safari 中開啟」或「在瀏覽器中開啟」。
+        </p>
+    </div>
+</div>
 
 <script type="text/babel">
     const { useState, useEffect } = React;
@@ -127,7 +136,6 @@
         const [opacity, setOpacity] = useState(0.5); 
         const [mode, setMode] = useState('grid'); 
         
-        // 九宮格的寬高
         const [gridWidth, setGridWidth] = useState(500);
         const [gridHeight, setGridHeight] = useState(500);
 
@@ -152,7 +160,6 @@
                         setImage(event.target.result);
                         setPosition({ x: 0, y: 0 });
                         
-                        // 自動計算合適的初始縮放比例
                         const maxSide = Math.max(img.naturalWidth, img.naturalHeight);
                         let initialScaleCalc = 600 / maxSide;
                         
@@ -161,7 +168,6 @@
 
                         setScale(initialScaleCalc);
 
-                        // 根據圖片比例初始化九宮格，但保持在合理範圍內
                         const aspect = img.naturalWidth / img.naturalHeight;
                         let newW, newH;
                         if (aspect >= 1) {
@@ -235,8 +241,6 @@
             };
         };
 
-        // --- RENDERERS ---
-
         const renderGrid = () => {
             const w = gridWidth;
             const h = gridHeight;
@@ -246,15 +250,10 @@
             const halfH = h / 2;
             
             return (
-                <g transform={`translate(${centerX}, ${centerY}) rotate(${rotation})`} style={{ pointerEvents: 'none' }}>
-                    {/* 外框 - 加粗到 5 */}
+                <g transform={`translate(${centerX}, ${centerY}) rotate(${-rotation})`} style={{ pointerEvents: 'none' }}>
                     <rect x={-halfW} y={-halfH} width={w} height={h} fill="none" stroke="rgba(37, 99, 235, 0.8)" strokeWidth="5" />
-                    
-                    {/* 垂直線 - 加粗到 3 */}
                     <line x1={-halfW + stepX} y1={-halfH} x2={-halfW + stepX} y2={halfH} stroke="rgba(37, 99, 235, 0.6)" strokeWidth="3" />
                     <line x1={-halfW + stepX * 2} y1={-halfH} x2={-halfW + stepX * 2} y2={halfH} stroke="rgba(37, 99, 235, 0.6)" strokeWidth="3" />
-                    
-                    {/* 水平線 - 加粗到 3 */}
                     <line x1={-halfW} y1={-halfH + stepY} x2={halfW} y2={-halfH + stepY} stroke="rgba(37, 99, 235, 0.6)" strokeWidth="3" />
                     <line x1={-halfW} y1={-halfH + stepY * 2} x2={halfW} y2={-halfH + stepY * 2} stroke="rgba(37, 99, 235, 0.6)" strokeWidth="3" />
                 </g>
@@ -263,11 +262,10 @@
 
         const renderPie = () => {
             const lines = [];
-            // 修改：加入中文方位與英文結合
             const labels = ['北 N', '東北 NE', '東 E', '東南 SE', '南 S', '西南 SW', '西 W', '西北 NW'];
             const radius = 560; 
             for (let i = 0; i < 8; i++) {
-                const angleDeg = (i * 45) - 90 + rotation; 
+                const angleDeg = (i * 45) - 90 - rotation; 
                 const angleRad = (angleDeg * Math.PI) / 180;
                 const textRadius = 320; 
                 const tx = centerX + textRadius * Math.cos(angleRad);
@@ -278,7 +276,6 @@
                 const by = centerY + radius * Math.sin(borderRad);
                 lines.push(
                     <g key={i} style={{ pointerEvents: 'none' }}>
-                        {/* 放射線 - 加粗到 3 */}
                         <line x1={centerX} y1={centerY} x2={bx} y2={by} stroke="rgba(22, 163, 74, 0.8)" strokeWidth="3" strokeDasharray="5,5" />
                         <text x={tx} y={ty} fill="#15803d" fontSize="22" fontWeight="bold" textAnchor="middle" dominantBaseline="middle" style={{ textShadow: '0px 0px 4px white' }}>{labels[i]}</text>
                     </g>
@@ -287,7 +284,6 @@
             return lines;
         };
 
-        // --- 三合盤 (San He) 邏輯 ---
         const render24Mountains = () => {
             const elements = [];
             
@@ -302,7 +298,6 @@
             const r_text_man = 265;    
             const r_text_earth = 205;  
 
-            // 背景圓 - 使用透明度
             elements.push(<circle key="c_base" cx={0} cy={0} r={r_max} fill={`rgba(255,255,255,${opacity})`} stroke="#333" strokeWidth="1" />);
             elements.push(<circle key="c_ticks" cx={0} cy={0} r={r_ticks_in} fill="none" stroke="#333" strokeWidth="1.5" />);
             
@@ -338,7 +333,6 @@
                 }
             }
 
-            // 地盤紅線
             for (let i = 0; i < 24; i++) {
                 const angleDeg = (i * 15) + 7.5; 
                 const angleRad = ((angleDeg - 90) * Math.PI) / 180;
@@ -351,7 +345,6 @@
                 elements.push(<line key={`rl_${i}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#dc2626" strokeWidth="0.8" opacity="0.8" />);
             }
 
-            // 天盤綠線
             for (let i = 0; i < 24; i++) {
                 const angleDeg = (i * 15) + 15; 
                 const angleRad = ((angleDeg - 90) * Math.PI) / 180;
@@ -369,7 +362,6 @@
                 const heavenTextColor = m.color === 'red' ? '#dc2626' : '#000000';
                 const manTextColor = '#000000'; 
 
-                // 地盤
                 const angleInner = m.angle;
                 const radInner = ((angleInner - 90) * Math.PI) / 180;
                 const tx1 = r_text_earth * Math.cos(radInner);
@@ -383,7 +375,6 @@
                     </text>
                 );
 
-                // 人盤
                 const angleMid = m.angle - 7.5;
                 const radMid = ((angleMid - 90) * Math.PI) / 180;
                 const tx2 = r_text_man * Math.cos(radMid);
@@ -397,7 +388,6 @@
                     </text>
                 );
 
-                // 天盤
                 const angleOuter = m.angle + 7.5;
                 const radOuter = ((angleOuter - 90) * Math.PI) / 180;
                 const tx3 = r_text_heaven * Math.cos(radOuter);
@@ -413,7 +403,7 @@
             });
 
             return (
-                <g transform={`translate(${centerX}, ${centerY}) rotate(${rotation})`} style={{ pointerEvents: 'none' }}>
+                <g transform={`translate(${centerX}, ${centerY}) rotate(${-rotation})`} style={{ pointerEvents: 'none' }}>
                     {elements}
                     <line x1={-r_max} y1={0} x2={r_max} y2={0} stroke="red" strokeWidth="1" strokeDasharray="5,5" opacity="0.3" />
                     <line x1={0} y1={-r_max} x2={0} y2={r_max} stroke="red" strokeWidth="1" strokeDasharray="5,5" opacity="0.3" />
@@ -421,7 +411,6 @@
             );
         };
 
-        // --- 三元盤 (San Yuan) 邏輯 ---
         const renderCompass = () => {
             const elements = [];
             const r_outer = 380; 
@@ -432,7 +421,6 @@
             const r_bagua_outer = 230;
             const r_bagua_inner = 80;
 
-            // 背景圓 - 使用透明度
             elements.push(<circle key="bg" cx={0} cy={0} r={r_outer} fill={`rgba(255,255,255,${opacity})`} stroke="#333" strokeWidth="2" />);
             elements.push(<circle key="bg_inner" cx={0} cy={0} r={r_ticks_in} fill="none" stroke="#333" strokeWidth="1" />);
             elements.push(<circle key="bg_24m" cx={0} cy={0} r={r_24m_outer} fill="none" stroke="#333" strokeWidth="1" />);
@@ -549,7 +537,7 @@
             }
 
             return (
-                <g transform={`translate(${centerX}, ${centerY}) rotate(${rotation})`} style={{ pointerEvents: 'none' }}>
+                <g transform={`translate(${centerX}, ${centerY}) rotate(${-rotation})`} style={{ pointerEvents: 'none' }}>
                     {elements}
                     <line x1={-r_outer} y1={0} x2={r_outer} y2={0} stroke="#dc2626" strokeWidth="1" strokeDasharray="4,4" opacity="0.5" />
                     <line x1={0} y1={-r_outer} x2={0} y2={r_outer} stroke="#dc2626" strokeWidth="1" strokeDasharray="4,4" opacity="0.5" />
